@@ -1,4 +1,4 @@
-import { Button, Container, Row, Col } from 'react-bootstrap'
+import { Button, Container, Row, Col, Spinner } from 'react-bootstrap'
 import {useState, useEffect} from 'react';
 import { Note as NoteModel } from './models/note';
 import Note from './components/Note';
@@ -9,17 +9,24 @@ import AddEditNoteDialog from './components/AddEditNotesDialog';
 function App() {
 
   const [notes, setNotes] = useState<NoteModel[]>([]);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [showNotesLoadingError, setShowNotesLoadingError] = useState(false);
   const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
   const [noteToEdit,setNoteToEdit ] = useState<NoteModel | null>(null)
   useEffect(()=>{
 
     async function loadNotes(){
       try{
+        setShowNotesLoadingError(false);
+        setNotesLoading(true);
         const notes = await NotesApi.fetchNotes();
         setNotes(notes);
       }catch(error){
         console.error(error);
         alert(error);
+        setShowNotesLoadingError(true);
+      }finally{
+        setNotesLoading(false);
       }
     }
     loadNotes();
@@ -33,12 +40,8 @@ function App() {
 			alert(error);
 		}
 	}
-  return (
-    <Container >
-      <Button className={`mb-4 ${styleUtils.blockCenter}`} onClick={()=>setShowAddNoteDialog(true)}>
-        Add Note
-      </Button>
-      <Row xs={1} md={2} lg={3} className='g-4'>
+  const notesGrid = 
+  <Row xs={1} md={2} lg={3} className={`g-4 ${styles.notesGrid}`}>
 
       {notes.map((note)=>(
         <Col>
@@ -53,6 +56,22 @@ function App() {
         </Col>
         ))}
         </Row>
+  return (
+    <Container className={styles.notesPage}>
+      <h1>Full Stack Notes App</h1>
+      <Button className={`mb-4 ${styleUtils.blockCenter}`} onClick={()=>setShowAddNoteDialog(true)}>
+        Add Note
+      </Button>
+      {notesLoading && <Spinner animation='border' variant='primary'/>}
+      {showNotesLoadingError && <p>Something went wrong, please refresh the page</p>}
+      {!notesLoading && !showNotesLoadingError && 
+        <>
+          {notes.length > 0 
+            ? notesGrid 
+            : <p>You don't have any notes yet</p>
+          }
+        </>
+      }
         { showAddNoteDialog && 
             <AddEditNoteDialog onDismiss={()=>setShowAddNoteDialog(false)} onNoteSaved={(newnote)=>{
               setNotes([...notes,newnote ])
